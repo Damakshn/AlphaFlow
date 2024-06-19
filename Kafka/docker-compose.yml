@@ -51,7 +51,7 @@ services:
     depends_on:
       kafka0:
         condition: service_healthy
-    command: "bash -c 'echo Ожидаем готовность Kafka... && \
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
                  cub kafka-ready -b kafka0:9092 1 30 && \
                  kafka-topics --create --topic weather.main.feed --partitions 3 --replication-factor 1 --if-not-exists --bootstrap-server kafka0:9092'"
 volumes:
