@@ -30,9 +30,47 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka0:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
     volumes:
       - kafka0-data:/var/lib/kafka/data
+    restart: unless-stopped
+  kafka1:
+    image: confluentinc/cp-kafka:${CONFLUENT_TAG}
+    healthcheck:
+      test: /bin/kafka-topics --list --bootstrap-server kafka1:9092 || exit 1
+      interval: 10s
+      retries: 25
+      start_period: 20s
+    container_name: kafka1
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - kafka1-data:/var/lib/kafka/data
+    restart: unless-stopped
+  kafka2:
+    image: confluentinc/cp-kafka:${CONFLUENT_TAG}
+    healthcheck:
+      test: /bin/kafka-topics --list --bootstrap-server kafka2:9092 || exit 1
+      interval: 10s
+      retries: 25
+      start_period: 20s
+    container_name: kafka2
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - kafka2-data:/var/lib/kafka/data
     restart: unless-stopped
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -42,10 +80,14 @@ services:
     depends_on:
       kafka0:
         condition: service_healthy
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
     restart: unless-stopped
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka0:9092'
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka0:9092,kafka1:9092,kafka2:9092'
   kafka-init-topics:
     image: confluentinc/cp-kafka:${CONFLUENT_TAG}
     depends_on:
@@ -53,8 +95,10 @@ services:
         condition: service_healthy
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
                  cub kafka-ready -b kafka0:9092 1 30 && \
-                 kafka-topics --create --topic weather.main.feed --partitions 3 --replication-factor 1 --if-not-exists --bootstrap-server kafka0:9092'"
+                 kafka-topics --create --topic weather.main.feed --partitions 3 --replication-factor 3 --if-not-exists --bootstrap-server kafka0:9092'"
 volumes:
    zk-data:
    zk-logs:  
    kafka0-data:
+   kafka1-data:
+   kafka2-data:
