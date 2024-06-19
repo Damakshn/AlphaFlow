@@ -1,0 +1,60 @@
+version: '3.9'
+name: explore-kafka
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:${CONFLUENT_TAG}
+    restart: unless-stopped
+    container_name: zookeeper
+    healthcheck:
+      test: echo srvr | nc zookeeper 2181 || exit 1
+      interval: 10s
+      retries: 5
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zk-data:/var/lib/zookeeper/data
+      - zk-logs:/var/lib/zookeeper/log
+  kafka0:
+    image: confluentinc/cp-kafka:${CONFLUENT_TAG}
+    healthcheck:
+      test: /bin/kafka-topics --list --bootstrap-server kafka0:9092 || exit 1
+      interval: 10s
+      retries: 25
+      start_period: 20s
+    container_name: kafka0
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka0-data:/var/lib/kafka/data
+    restart: unless-stopped
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - 8080:8080
+    depends_on:
+      kafka0:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka0:9092'
+  kafka-init-topics:
+    image: confluentinc/cp-kafka:${CONFLUENT_TAG}
+    depends_on:
+      kafka0:
+        condition: service_healthy
+    command: "bash -c 'echo Ожидаем готовность Kafka... && \
+                 cub kafka-ready -b kafka0:9092 1 30 && \
+                 kafka-topics --create --topic weather.main.feed --partitions 3 --replication-factor 1 --if-not-exists --bootstrap-server kafka0:9092'"
+volumes:
+   zk-data:
+   zk-logs:  
+   kafka0-data:
