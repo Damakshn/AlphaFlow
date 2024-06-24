@@ -74,7 +74,7 @@ services:
       - kafka2-data:/bitnami/kafka
     restart: unless-stopped
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:${KAFKA_UI_TAG}
     container_name: kafka-ui
     ports:
       - 8080:8080
