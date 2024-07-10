@@ -3,6 +3,8 @@ name: explore-kafka
 services:
   zookeeper:
     image: bitnami/zookeeper:${ZOOKEEPER_TAG}
+    ports:
+      - 2181:2181
     restart: unless-stopped
     container_name: zookeeper
     healthcheck:
